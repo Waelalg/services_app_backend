@@ -1,0 +1,1064 @@
+{
+  "info": {
+    "_postman_id": "3e7ef658-2b52-4a4a-bf7b-df773f841cb8",
+    "name": "Artisan Marketplace API",
+    "description": "Postman collection for the production-style artisan marketplace backend. Protected routes use Bearer {{jwtToken}}. Login stores the token automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwtToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "description": "Simple health probe for service monitoring.",
+            "url": "{{baseUrl}}/api/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register Client",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Create a client account. Registration requires gender and dateOfBirth.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Sara\",\n  \"lastName\": \"Client\",\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"{{clientPassword}}\",\n  \"phone\": \"+213555000001\",\n  \"gender\": \"FEMALE\",\n  \"dateOfBirth\": \"1997-05-14\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register/client"
+          }
+        },
+        {
+          "name": "Register Worker",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Create a worker account. Service specialization is added later through listings, not at registration time. Registration requires gender and dateOfBirth.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Yacine\",\n  \"lastName\": \"Worker\",\n  \"email\": \"{{workerEmail}}\",\n  \"password\": \"{{workerPassword}}\",\n  \"phone\": \"+213555000002\",\n  \"gender\": \"MALE\",\n  \"dateOfBirth\": \"1994-08-23\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register/worker"
+          }
+        },
+        {
+          "name": "Register Generic",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Generic registration endpoint when role is provided explicitly. Gender and dateOfBirth are required.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Nadia\",\n  \"lastName\": \"Generic\",\n  \"email\": \"generic@example.com\",\n  \"password\": \"GenericPass123\",\n  \"phone\": \"+213555000003\",\n  \"gender\": \"FEMALE\",\n  \"dateOfBirth\": \"1996-01-30\",\n  \"role\": \"CLIENT\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.token) {",
+                  "  pm.environment.set('jwtToken', json.data.token);",
+                  "}",
+                  "if (json.success && json.data && json.data.user) {",
+                  "  pm.environment.set('userId', json.data.user.id || '');",
+                  "  if (json.data.user.workerProfile && json.data.user.workerProfile.id) {",
+                  "    pm.environment.set('workerId', json.data.user.workerProfile.id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authenticate and store {{jwtToken}} for later requests.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{workerEmail}}\",\n  \"password\": \"{{workerPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "description": "Fetch the authenticated user profile.",
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Update basic client or worker profile fields.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Yacine\",\n  \"lastName\": \"Worker\",\n  \"phone\": \"+213555009999\",\n  \"headline\": \"Trusted artisan\",\n  \"bio\": \"Updated profile bio\",\n  \"yearsExperience\": 7,\n  \"avgResponseMinutes\": 45\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Taxonomy",
+      "item": [
+        {
+          "name": "Get Categories",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && Array.isArray(json.data) && json.data.length > 0) {",
+                  "  pm.environment.set('categoryId', json.data[0].id);",
+                  "  if (Array.isArray(json.data[0].subcategories) && json.data[0].subcategories.length > 0) {",
+                  "    pm.environment.set('subcategoryId', json.data[0].subcategories[0].id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "description": "Fetch all categories with nested subcategories.",
+            "url": "{{baseUrl}}/api/taxonomy/categories"
+          }
+        },
+        {
+          "name": "Get Subcategories By Category",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "description": "Fetch subcategories for one category.",
+            "url": "{{baseUrl}}/api/taxonomy/categories/{{categoryId}}/subcategories"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workers",
+      "item": [
+        {
+          "name": "Browse Workers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && Array.isArray(json.data) && json.data.length > 0) {",
+                  "  pm.environment.set('workerId', json.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "description": "Browse public worker profiles with filters and sorting. Authentication is optional for favorite status hydration.",
+            "url": "{{baseUrl}}/api/workers?categoryId={{categoryId}}&subcategoryId={{subcategoryId}}&wilaya=Algiers&commune=Bab%20Ezzouar&search=plumber&minRating=4&sort=topRated&page=1&pageSize=10"
+          }
+        },
+        {
+          "name": "Get Worker Details",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "description": "Fetch the worker profile screen payload.",
+            "url": "{{baseUrl}}/api/workers/{{workerId}}"
+          }
+        },
+        {
+          "name": "Get Worker Reviews",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "description": "Paginated worker reviews feed.",
+            "url": "{{baseUrl}}/api/workers/{{workerId}}/reviews?page=1&pageSize=10"
+          }
+        },
+        {
+          "name": "Add Favorite",
+          "request": {
+            "method": "POST",
+            "description": "Favorite a worker. Client role only.",
+            "url": "{{baseUrl}}/api/workers/{{workerId}}/favorite"
+          }
+        },
+        {
+          "name": "Remove Favorite",
+          "request": {
+            "method": "DELETE",
+            "description": "Remove a worker from the authenticated client's favorites.",
+            "url": "{{baseUrl}}/api/workers/{{workerId}}/favorite"
+          }
+        },
+        {
+          "name": "Get My Favorites",
+          "request": {
+            "method": "GET",
+            "description": "Paginated favorites list for the authenticated client.",
+            "url": "{{baseUrl}}/api/workers/favorites/me?page=1&pageSize=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Listings",
+      "item": [
+        {
+          "name": "Create Listing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.id) {",
+                  "  pm.environment.set('listingId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "description": "Create a worker service listing as multipart form-data. This matches the mobile flow: category/subcategory selection, work areas, availability, description, and gallery photos. Send `workAreas` and `availabilityRules` as JSON strings, and repeat the `images` key for multiple files.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "subcategoryId",
+                  "value": "{{subcategoryId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Emergency plumbing repairs",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Leak fixing, pipe replacement, and emergency visits.",
+                  "type": "text"
+                },
+                {
+                  "key": "pricingType",
+                  "value": "QUOTE",
+                  "type": "text"
+                },
+                {
+                  "key": "priceFrom",
+                  "value": "2500",
+                  "type": "text"
+                },
+                {
+                  "key": "currency",
+                  "value": "DZD",
+                  "type": "text"
+                },
+                {
+                  "key": "isPublished",
+                  "value": "false",
+                  "type": "text"
+                },
+                {
+                  "key": "workAreas",
+                  "value": "[{\"wilaya\":\"Biskra\",\"commune\":\"Doucen\"}]",
+                  "type": "text"
+                },
+                {
+                  "key": "availabilityRules",
+                  "value": "[{\"dayOfWeek\":1,\"startTime\":\"09:00\",\"endTime\":\"17:00\",\"slotDurationMinutes\":60,\"isActive\":true}]",
+                  "type": "text"
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/listings"
+          }
+        },
+        {
+          "name": "Get My Listings",
+          "request": {
+            "method": "GET",
+            "description": "Fetch the authenticated worker's listings with flags for empty states.",
+            "url": "{{baseUrl}}/api/listings/me?page=1&pageSize=10"
+          }
+        },
+        {
+          "name": "Get Listing By Id",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "description": "Fetch one listing. Public when published, private to owner otherwise.",
+            "url": "{{baseUrl}}/api/listings/{{listingId}}"
+          }
+        },
+        {
+          "name": "Update Listing",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Update listing content or status fields.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Premium plumbing repairs\",\n  \"description\": \"Updated listing description\",\n  \"priceFrom\": 3000\n}"
+            },
+            "url": "{{baseUrl}}/api/listings/{{listingId}}"
+          }
+        },
+        {
+          "name": "Publish Listing",
+          "request": {
+            "method": "PATCH",
+            "description": "Publish a listing for public booking.",
+            "url": "{{baseUrl}}/api/listings/{{listingId}}/publish"
+          }
+        },
+        {
+          "name": "Unpublish Listing",
+          "request": {
+            "method": "PATCH",
+            "description": "Pause a published listing.",
+            "url": "{{baseUrl}}/api/listings/{{listingId}}/unpublish"
+          }
+        },
+        {
+          "name": "Add Work Area",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.id) {",
+                  "  pm.environment.set('workAreaId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Add a wilaya/commune work area to a listing.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wilaya\": \"Algiers\",\n  \"commune\": \"Bab Ezzouar\"\n}"
+            },
+            "url": "{{baseUrl}}/api/listings/{{listingId}}/work-areas"
+          }
+        },
+        {
+          "name": "Delete Work Area",
+          "request": {
+            "method": "DELETE",
+            "description": "Delete a listing work area.",
+            "url": "{{baseUrl}}/api/listings/work-areas/{{workAreaId}}"
+          }
+        },
+        {
+          "name": "Add Portfolio Image",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.id) {",
+                  "  pm.environment.set('portfolioImageId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Attach a portfolio image to a listing.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imageUrl\": \"https://example.com/portfolio-1.jpg\",\n  \"caption\": \"Bathroom pipe repair\",\n  \"displayOrder\": 0\n}"
+            },
+            "url": "{{baseUrl}}/api/listings/{{listingId}}/portfolio"
+          }
+        },
+        {
+          "name": "Delete Portfolio Image",
+          "request": {
+            "method": "DELETE",
+            "description": "Delete a portfolio image.",
+            "url": "{{baseUrl}}/api/listings/portfolio/{{portfolioImageId}}"
+          }
+        },
+        {
+          "name": "Add Availability Rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.id) {",
+                  "  pm.environment.set('availabilityRuleId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Create a recurring weekly availability rule.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dayOfWeek\": 1,\n  \"startTime\": \"09:00\",\n  \"endTime\": \"17:00\",\n  \"slotDurationMinutes\": 60,\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/listings/{{listingId}}/availability-rules"
+          }
+        },
+        {
+          "name": "Update Availability Rule",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Update an existing weekly availability rule.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"10:00\",\n  \"endTime\": \"18:00\",\n  \"slotDurationMinutes\": 60,\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/listings/availability-rules/{{availabilityRuleId}}"
+          }
+        },
+        {
+          "name": "Delete Availability Rule",
+          "request": {
+            "method": "DELETE",
+            "description": "Delete an availability rule.",
+            "url": "{{baseUrl}}/api/listings/availability-rules/{{availabilityRuleId}}"
+          }
+        },
+        {
+          "name": "Add Time Off",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.id) {",
+                  "  pm.environment.set('timeOffId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Block a listing for a date/time range.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startDateTime\": \"2026-04-25T12:00:00.000Z\",\n  \"endDateTime\": \"2026-04-25T14:00:00.000Z\",\n  \"reason\": \"Personal leave\"\n}"
+            },
+            "url": "{{baseUrl}}/api/listings/{{listingId}}/time-off"
+          }
+        },
+        {
+          "name": "Delete Time Off",
+          "request": {
+            "method": "DELETE",
+            "description": "Delete a blocked time range.",
+            "url": "{{baseUrl}}/api/listings/time-off/{{timeOffId}}"
+          }
+        },
+        {
+          "name": "Get Available Slots",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "description": "Generate free slots for one listing and date using rules, time off, and confirmed bookings.",
+            "url": "{{baseUrl}}/api/listings/{{listingId}}/available-slots?date={{scheduledDate}}"
+          }
+        },
+        {
+          "name": "Delete Listing",
+          "request": {
+            "method": "DELETE",
+            "description": "Delete a listing when it has no active bookings.",
+            "url": "{{baseUrl}}/api/listings/{{listingId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Client Requests",
+      "item": [
+        {
+          "name": "Create Public Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.id) {",
+                  "  pm.environment.set('requestId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "description": "Create a public client request as multipart form-data. Repeat the `images` key for multiple files. This matches the mobile flow where the client can attach photos while posting a public opportunity.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "subcategoryId",
+                  "value": "{{subcategoryId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Need urgent leak repair",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Kitchen sink pipe is leaking and needs fast repair.",
+                  "type": "text"
+                },
+                {
+                  "key": "wilaya",
+                  "value": "Algiers",
+                  "type": "text"
+                },
+                {
+                  "key": "commune",
+                  "value": "Bab Ezzouar",
+                  "type": "text"
+                },
+                {
+                  "key": "addressLine",
+                  "value": "Residence 12, Street 5",
+                  "type": "text"
+                },
+                {
+                  "key": "preferredDate",
+                  "value": "{{preferredDate}}",
+                  "type": "text"
+                },
+                {
+                  "key": "preferredTime",
+                  "value": "10:00",
+                  "type": "text"
+                },
+                {
+                  "key": "requestMode",
+                  "value": "OPEN_REQUEST",
+                  "type": "text"
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/requests"
+          }
+        },
+        {
+          "name": "Get My Requests",
+          "request": {
+            "method": "GET",
+            "description": "Fetch the authenticated client's requests.",
+            "url": "{{baseUrl}}/api/requests/my?page=1&pageSize=10"
+          }
+        },
+        {
+          "name": "Update Own Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Update an open public request.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Need same-day leak repair\",\n  \"description\": \"Updated request description\",\n  \"preferredTime\": \"11:00\"\n}"
+            },
+            "url": "{{baseUrl}}/api/requests/{{requestId}}"
+          }
+        },
+        {
+          "name": "Cancel Own Request",
+          "request": {
+            "method": "PATCH",
+            "description": "Cancel an open or offered request.",
+            "url": "{{baseUrl}}/api/requests/{{requestId}}/cancel"
+          }
+        },
+        {
+          "name": "Get Request Details",
+          "request": {
+            "method": "GET",
+            "description": "Fetch request details. Clients see own offers; workers see visible opportunities and own offers.",
+            "url": "{{baseUrl}}/api/requests/{{requestId}}"
+          }
+        },
+        {
+          "name": "List Offers Received",
+          "request": {
+            "method": "GET",
+            "description": "List offers received on one client request.",
+            "url": "{{baseUrl}}/api/requests/{{requestId}}/offers?page=1&pageSize=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Worker Opportunities",
+      "item": [
+        {
+          "name": "Explore Opportunities",
+          "request": {
+            "method": "GET",
+            "description": "Open opportunity feed for workers. Use filters for category, subcategory, and location.",
+            "url": "{{baseUrl}}/api/requests/explore?tab=explore&categoryId={{categoryId}}&subcategoryId={{subcategoryId}}&wilaya=Algiers&commune=Bab%20Ezzouar&page=1&pageSize=10"
+          }
+        },
+        {
+          "name": "Opportunities Tab - Offers",
+          "request": {
+            "method": "GET",
+            "description": "Worker tab showing requests where the current worker has already offered.",
+            "url": "{{baseUrl}}/api/requests/opportunities?tab=offers&page=1&pageSize=10"
+          }
+        },
+        {
+          "name": "Opportunities Tab - Confirmed",
+          "request": {
+            "method": "GET",
+            "description": "Worker tab showing bookings created from accepted offers.",
+            "url": "{{baseUrl}}/api/requests/opportunities?tab=confirmed&page=1&pageSize=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Offers",
+      "item": [
+        {
+          "name": "Make Offer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.id) {",
+                  "  pm.environment.set('offerId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Worker sends an offer on a public client request.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"I can visit tomorrow morning.\",\n  \"proposedPrice\": 4500,\n  \"proposedDate\": \"{{preferredDate}}\",\n  \"proposedStartTime\": \"10:00\",\n  \"proposedEndTime\": \"11:00\"\n}"
+            },
+            "url": "{{baseUrl}}/api/requests/{{requestId}}/offers"
+          }
+        },
+        {
+          "name": "Withdraw Offer",
+          "request": {
+            "method": "DELETE",
+            "description": "Worker withdraws an unaccepted offer.",
+            "url": "{{baseUrl}}/api/requests/offers/{{offerId}}"
+          }
+        },
+        {
+          "name": "Accept Offer",
+          "request": {
+            "method": "PATCH",
+            "description": "Client accepts one offer. This creates a confirmed booking and rejects competing offers.",
+            "url": "{{baseUrl}}/api/requests/offers/{{offerId}}/accept"
+          }
+        },
+        {
+          "name": "Reject Offer",
+          "request": {
+            "method": "PATCH",
+            "description": "Client rejects one sent offer.",
+            "url": "{{baseUrl}}/api/requests/offers/{{offerId}}/reject"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Create Direct Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.id) {",
+                  "  pm.environment.set('bookingId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Create a direct booking without date/time selection.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingId\": \"{{listingId}}\",\n  \"note\": \"Need help today if possible.\",\n  \"contactPhone\": \"+213555111111\"\n}"
+            },
+            "url": "{{baseUrl}}/api/bookings"
+          }
+        },
+        {
+          "name": "Create Scheduled Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.id) {",
+                  "  pm.environment.set('bookingId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Create a scheduled booking with date and slot.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingId\": \"{{listingId}}\",\n  \"scheduledDate\": \"{{scheduledDate}}\",\n  \"slotStart\": \"09:00\",\n  \"slotEnd\": \"10:00\",\n  \"note\": \"Morning visit please.\",\n  \"contactPhone\": \"+213555111111\"\n}"
+            },
+            "url": "{{baseUrl}}/api/bookings"
+          }
+        },
+        {
+          "name": "Get My Bookings",
+          "request": {
+            "method": "GET",
+            "description": "Client booking list with optional status filtering.",
+            "url": "{{baseUrl}}/api/bookings/my?status=PENDING&page=1&pageSize=10"
+          }
+        },
+        {
+          "name": "Get Incoming Bookings",
+          "request": {
+            "method": "GET",
+            "description": "Worker incoming booking queue.",
+            "url": "{{baseUrl}}/api/bookings/incoming?status=PENDING&page=1&pageSize=10"
+          }
+        },
+        {
+          "name": "Get Booking Details",
+          "request": {
+            "method": "GET",
+            "description": "Fetch one booking by id for either participant.",
+            "url": "{{baseUrl}}/api/bookings/{{bookingId}}"
+          }
+        },
+        {
+          "name": "Accept Booking",
+          "request": {
+            "method": "PATCH",
+            "description": "Worker confirms an incoming pending booking.",
+            "url": "{{baseUrl}}/api/bookings/{{bookingId}}/accept"
+          }
+        },
+        {
+          "name": "Decline Booking",
+          "request": {
+            "method": "PATCH",
+            "description": "Worker declines an incoming pending booking.",
+            "url": "{{baseUrl}}/api/bookings/{{bookingId}}/decline"
+          }
+        },
+        {
+          "name": "Complete Booking",
+          "request": {
+            "method": "PATCH",
+            "description": "Worker marks a confirmed booking as completed.",
+            "url": "{{baseUrl}}/api/bookings/{{bookingId}}/complete"
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "PATCH",
+            "description": "Client cancels an own pending or confirmed booking.",
+            "url": "{{baseUrl}}/api/bookings/{{bookingId}}/cancel"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Create Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Create one review for a completed booking. Client role only.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"{{bookingId}}\",\n  \"rating\": 5,\n  \"comment\": \"Fast response and clean work.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/reviews"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Worker Dashboard",
+          "request": {
+            "method": "GET",
+            "description": "Worker home payload with status counts, recent incoming bookings, matching opportunities, and upcoming jobs.",
+            "url": "{{baseUrl}}/api/workers/dashboard/me"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000"
+    },
+    {
+      "key": "jwtToken",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "subcategoryId",
+      "value": ""
+    },
+    {
+      "key": "workerId",
+      "value": ""
+    },
+    {
+      "key": "listingId",
+      "value": ""
+    },
+    {
+      "key": "requestId",
+      "value": ""
+    },
+    {
+      "key": "offerId",
+      "value": ""
+    },
+    {
+      "key": "bookingId",
+      "value": ""
+    }
+  ]
+}

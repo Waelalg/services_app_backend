@@ -1,0 +1,325 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CLIENT
+  WORKER
+}
+
+enum PricingType {
+  QUOTE
+  FIXED
+  HOURLY
+}
+
+enum ListingStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  ARCHIVED
+}
+
+enum RequestMode {
+  OPEN_REQUEST
+  DIRECT_TO_WORKER
+}
+
+enum RequestStatus {
+  OPEN
+  OFFERED
+  BOOKED
+  CLOSED
+  CANCELLED
+}
+
+enum BookingType {
+  DIRECT
+  SCHEDULED
+}
+
+enum BookingSource {
+  DIRECT_LISTING
+  REQUEST_OFFER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  CANCELLED
+  COMPLETED
+}
+
+enum OfferStatus {
+  SENT
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+model User {
+  id             String          @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String          @unique
+  phone          String?
+  passwordHash   String
+  role           UserRole
+  avatarUrl      String?
+  dateOfBirth    DateTime?
+  gender         String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  workerProfile  WorkerProfile?
+  clientRequests ClientRequest[] @relation("ClientRequests")
+  bookings       Booking[]       @relation("ClientBookings")
+  favorites      Favorite[]
+  reviewsGiven   Review[]        @relation("ReviewsGiven")
+}
+
+model WorkerProfile {
+  id                  String                   @id @default(cuid())
+  userId              String                   @unique
+  // Worker specialization lives on WorkerListing records, so profile extras remain optional.
+  headline            String?
+  bio                 String?
+  yearsExperience     Int?
+  completedRequests   Int                      @default(0)
+  avgResponseMinutes  Int?
+  isTrusted           Boolean                  @default(false)
+  ratingAvg           Decimal?                 @db.Decimal(3, 2)
+  ratingCount         Int                      @default(0)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  user                User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listings            WorkerListing[]
+  offers              ClientRequestOffer[]
+  bookingsReceived    Booking[]                @relation("WorkerBookings")
+  reviewsReceived     Review[]                 @relation("ReviewsReceived")
+  favoritedBy         Favorite[]
+}
+
+model Category {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  slug          String         @unique
+  icon          String?
+  displayOrder  Int            @default(0)
+  createdAt     DateTime       @default(now())
+
+  subcategories Subcategory[]
+  listings      WorkerListing[]
+  clientRequests ClientRequest[]
+}
+
+model Subcategory {
+  id            String         @id @default(cuid())
+  categoryId    String
+  name          String
+  slug          String
+  displayOrder  Int            @default(0)
+  createdAt     DateTime       @default(now())
+
+  category      Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  listings      WorkerListing[]
+  clientRequests ClientRequest[]
+
+  @@unique([categoryId, slug])
+}
+
+model WorkerListing {
+  id                  String                   @id @default(cuid())
+  workerProfileId     String
+  categoryId          String
+  subcategoryId       String?
+  title               String
+  description         String
+  pricingType         PricingType              @default(QUOTE)
+  priceFrom           Decimal?                 @db.Decimal(10, 2)
+  currency            String                   @default("DZD")
+  status              ListingStatus            @default(DRAFT)
+  isPublished         Boolean                  @default(false)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  workerProfile       WorkerProfile            @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  category            Category                 @relation(fields: [categoryId], references: [id])
+  subcategory         Subcategory?             @relation(fields: [subcategoryId], references: [id])
+  workAreas           ListingWorkArea[]
+  portfolioImages     PortfolioImage[]
+  availabilityRules   WorkerAvailabilityRule[]
+  timeOff             WorkerTimeOff[]
+  bookings            Booking[]
+}
+
+model ListingWorkArea {
+  id            String         @id @default(cuid())
+  listingId     String
+  wilaya        String
+  commune       String
+  createdAt     DateTime       @default(now())
+
+  listing       WorkerListing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, wilaya, commune])
+  @@index([wilaya, commune])
+}
+
+model PortfolioImage {
+  id            String         @id @default(cuid())
+  listingId      String
+  imageUrl       String
+  caption        String?
+  displayOrder   Int            @default(0)
+  createdAt      DateTime       @default(now())
+
+  listing        WorkerListing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model WorkerAvailabilityRule {
+  id                  String         @id @default(cuid())
+  listingId           String
+  dayOfWeek           Int
+  startTime           String
+  endTime             String
+  slotDurationMinutes Int            @default(60)
+  isActive            Boolean        @default(true)
+  createdAt           DateTime       @default(now())
+
+  listing             WorkerListing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model WorkerTimeOff {
+  id            String         @id @default(cuid())
+  listingId      String
+  startDateTime  DateTime
+  endDateTime    DateTime
+  reason         String?
+  createdAt      DateTime       @default(now())
+
+  listing        WorkerListing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model ClientRequest {
+  id             String              @id @default(cuid())
+  clientId       String
+  categoryId     String
+  subcategoryId  String?
+  title          String
+  description    String
+  wilaya         String
+  commune        String
+  addressLine    String?
+  preferredDate  DateTime?
+  preferredTime  String?
+  requestMode    RequestMode         @default(OPEN_REQUEST)
+  status         RequestStatus       @default(OPEN)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  client         User                @relation("ClientRequests", fields: [clientId], references: [id], onDelete: Cascade)
+  category       Category            @relation(fields: [categoryId], references: [id])
+  subcategory    Subcategory?        @relation(fields: [subcategoryId], references: [id])
+  offers         ClientRequestOffer[]
+  bookings       Booking[]
+  images         ClientRequestImage[]
+
+  @@index([status, wilaya])
+  @@index([categoryId, subcategoryId, status])
+}
+
+model ClientRequestImage {
+  id            String         @id @default(cuid())
+  requestId     String
+  imageUrl      String
+  displayOrder  Int            @default(0)
+  createdAt     DateTime       @default(now())
+
+  request       ClientRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model ClientRequestOffer {
+  id                 String          @id @default(cuid())
+  requestId          String
+  workerProfileId    String
+  message            String?
+  proposedPrice      Decimal?        @db.Decimal(10, 2)
+  proposedDate       DateTime?
+  proposedStartTime  String?
+  proposedEndTime    String?
+  status             OfferStatus     @default(SENT)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  request            ClientRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  workerProfile      WorkerProfile   @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+  booking            Booking?
+
+  @@unique([requestId, workerProfileId])
+  @@index([workerProfileId, status])
+}
+
+model Booking {
+  id                String          @id @default(cuid())
+  clientId          String
+  workerProfileId   String
+  listingId         String?
+  clientRequestId   String?
+  offerId           String?         @unique
+  source            BookingSource   @default(DIRECT_LISTING)
+  bookingType       BookingType
+  scheduledDate     DateTime?
+  slotStart         String?
+  slotEnd           String?
+  note              String?
+  contactPhone      String?
+  status            BookingStatus   @default(PENDING)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  client            User            @relation("ClientBookings", fields: [clientId], references: [id], onDelete: Cascade)
+  workerProfile     WorkerProfile   @relation("WorkerBookings", fields: [workerProfileId], references: [id], onDelete: Cascade)
+  listing           WorkerListing?  @relation(fields: [listingId], references: [id])
+  clientRequest     ClientRequest?  @relation(fields: [clientRequestId], references: [id], onDelete: SetNull)
+  offer             ClientRequestOffer? @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  review            Review?
+
+  @@index([clientId, status])
+  @@index([workerProfileId, status])
+  @@index([scheduledDate, status])
+}
+
+model Review {
+  id                String          @id @default(cuid())
+  bookingId         String          @unique
+  reviewerId        String
+  reviewedWorkerId  String
+  rating            Int
+  comment           String?
+  createdAt         DateTime        @default(now())
+
+  booking           Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reviewer          User            @relation("ReviewsGiven", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewedWorker    WorkerProfile   @relation("ReviewsReceived", fields: [reviewedWorkerId], references: [id], onDelete: Cascade)
+}
+
+model Favorite {
+  id                String          @id @default(cuid())
+  clientId          String
+  workerProfileId   String
+  createdAt         DateTime        @default(now())
+
+  client            User            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  workerProfile     WorkerProfile   @relation(fields: [workerProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, workerProfileId])
+}
