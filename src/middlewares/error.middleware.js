@@ -78,6 +78,16 @@ export function errorHandler(error, req, res, next) {
     });
   }
 
+  if (error instanceof Prisma.PrismaClientUnknownRequestError) {
+    if (error.message?.includes('not found in enum')) {
+      console.error(error);
+      return sendError(res, {
+        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+        message: 'Database schema and generated Prisma Client are out of sync. Regenerate Prisma Client and redeploy.'
+      });
+    }
+  }
+
   if (error instanceof multer.MulterError) {
     const message =
       error.code === 'LIMIT_FILE_SIZE'
