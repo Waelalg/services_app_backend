@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { USER_ROLES } from '../constants/enums.js';
+import { REGISTERABLE_USER_ROLES } from '../constants/enums.js';
 import { requiredDateStringSchema } from './common.validation.js';
 
 const optionalNullableNumber = (schema) =>
@@ -31,7 +31,7 @@ const baseRegisterSchema = z.object({
 export const clientRegisterSchema = baseRegisterSchema;
 
 export const registerSchema = baseRegisterSchema.extend({
-  role: z.enum(USER_ROLES)
+  role: z.enum(REGISTERABLE_USER_ROLES)
 });
 
 export const workerRegisterSchema = baseRegisterSchema;

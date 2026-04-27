@@ -1,4 +1,5 @@
-export const USER_ROLES = ['CLIENT', 'WORKER'];
+export const USER_ROLES = ['CLIENT', 'WORKER', 'ADMIN'];
+export const REGISTERABLE_USER_ROLES = ['CLIENT', 'WORKER'];
 
 export const PRICING_TYPES = ['QUOTE', 'FIXED', 'HOURLY'];
 

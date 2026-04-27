@@ -22,7 +22,16 @@ const bookingInclude = {
       portfolioImages: { orderBy: { displayOrder: 'asc' } }
     }
   },
-  clientRequest: true
+  clientRequest: {
+    include: {
+      category: true,
+      subcategory: true,
+      client: true,
+      images: {
+        orderBy: { displayOrder: 'asc' }
+      }
+    }
+  }
 };
 
 async function getListingScheduleContext(listingId, tx = prisma) {

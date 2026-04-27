@@ -82,6 +82,40 @@ export function serializeWorkerProfile(workerProfile, options = {}) {
   };
 }
 
+export function serializeSubcategory(subcategory) {
+  if (!subcategory) {
+    return null;
+  }
+
+  return {
+    id: subcategory.id,
+    categoryId: subcategory.categoryId,
+    name: subcategory.name,
+    slug: subcategory.slug,
+    imageUrl: subcategory.imageUrl ?? null,
+    displayOrder: subcategory.displayOrder
+  };
+}
+
+export function serializeCategory(category, options = {}) {
+  if (!category) {
+    return null;
+  }
+
+  const includeSubcategories = options.includeSubcategories ?? false;
+
+  return {
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    imageUrl: category.imageUrl ?? null,
+    displayOrder: category.displayOrder,
+    subcategories: includeSubcategories
+      ? (category.subcategories || []).map(serializeSubcategory)
+      : undefined
+  };
+}
+
 export function serializeListing(listing, options = {}) {
   if (!listing) {
     return null;
@@ -102,21 +136,8 @@ export function serializeListing(listing, options = {}) {
     isPublished: listing.isPublished,
     createdAt: formatDateTime(listing.createdAt),
     updatedAt: formatDateTime(listing.updatedAt),
-    category: listing.category
-      ? {
-          id: listing.category.id,
-          name: listing.category.name,
-          slug: listing.category.slug,
-          icon: listing.category.icon
-        }
-      : null,
-    subcategory: listing.subcategory
-      ? {
-          id: listing.subcategory.id,
-          name: listing.subcategory.name,
-          slug: listing.subcategory.slug
-        }
-      : null,
+    category: serializeCategory(listing.category),
+    subcategory: serializeSubcategory(listing.subcategory),
     workAreas: (listing.workAreas || []).map((area) => ({
       id: area.id,
       wilaya: area.wilaya,
@@ -218,15 +239,7 @@ export function serializeBooking(booking) {
     client: booking.client ? serializeUser(booking.client) : null,
     worker: booking.workerProfile ? serializeWorkerProfile(booking.workerProfile) : null,
     listing: booking.listing ? serializeListing(booking.listing) : null,
-    request: booking.clientRequest
-      ? {
-          id: booking.clientRequest.id,
-          title: booking.clientRequest.title,
-          status: booking.clientRequest.status,
-          wilaya: booking.clientRequest.wilaya,
-          commune: booking.clientRequest.commune
-        }
-      : null
+    request: booking.clientRequest ? serializeClientRequest(booking.clientRequest) : null
   };
 }
 
@@ -253,21 +266,8 @@ export function serializeClientRequest(request, options = {}) {
     status: request.status,
     createdAt: formatDateTime(request.createdAt),
     updatedAt: formatDateTime(request.updatedAt),
-    category: request.category
-      ? {
-          id: request.category.id,
-          name: request.category.name,
-          slug: request.category.slug,
-          icon: request.category.icon
-        }
-      : null,
-    subcategory: request.subcategory
-      ? {
-          id: request.subcategory.id,
-          name: request.subcategory.name,
-          slug: request.subcategory.slug
-        }
-      : null,
+    category: serializeCategory(request.category),
+    subcategory: serializeSubcategory(request.subcategory),
     client: request.client ? serializeUser(request.client) : null,
     images: (request.images || []).map((image) => ({
       id: image.id,

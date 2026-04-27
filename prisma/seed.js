@@ -1,12 +1,14 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
   const categories = [
-    { name: 'Works', slug: 'works', displayOrder: 1 },
-    { name: 'Beauty', slug: 'beauty', displayOrder: 2 },
-    { name: 'Health', slug: 'health', displayOrder: 3 }
+    { name: 'Works', slug: 'works', imageUrl: null, displayOrder: 1 },
+    { name: 'Beauty', slug: 'beauty', imageUrl: null, displayOrder: 2 },
+    { name: 'Health', slug: 'health', imageUrl: null, displayOrder: 3 }
   ];
 
   const createdCategories = {};
@@ -50,7 +52,33 @@ async function main() {
         categoryId,
         name: item.name,
         slug: item.slug,
+        imageUrl: null,
         displayOrder: item.displayOrder
+      }
+    });
+  }
+
+  if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+    const email = process.env.ADMIN_EMAIL.trim().toLowerCase();
+    const passwordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12);
+
+    await prisma.user.upsert({
+      where: { email },
+      update: {
+        passwordHash,
+        role: 'ADMIN',
+        isActive: true
+      },
+      create: {
+        firstName: process.env.ADMIN_FIRST_NAME || 'Admin',
+        lastName: process.env.ADMIN_LAST_NAME || 'User',
+        email,
+        passwordHash,
+        role: 'ADMIN',
+        gender: process.env.ADMIN_GENDER || null,
+        dateOfBirth: process.env.ADMIN_DATE_OF_BIRTH
+          ? new Date(`${process.env.ADMIN_DATE_OF_BIRTH}T00:00:00.000Z`)
+          : null
       }
     });
   }

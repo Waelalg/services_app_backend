@@ -53,12 +53,17 @@ npm run dev
 - `DATABASE_URL`: PostgreSQL / Neon connection string
 - `JWT_SECRET`: signing secret for access tokens
 - `JWT_EXPIRES_IN`: JWT expiry string such as `7d`
+- `ADMIN_EMAIL`: optional seed admin email
+- `ADMIN_PASSWORD`: optional seed admin password
+- `ADMIN_FIRST_NAME`: optional seed admin first name
+- `ADMIN_LAST_NAME`: optional seed admin last name
 
 ## Core business rules
 
-- Roles are `CLIENT` and `WORKER`
+- Mobile roles are `CLIENT` and `WORKER`; `ADMIN` exists only for protected back-office routes
 - Worker registration creates a lightweight `WorkerProfile`
 - Worker specialization is defined by `WorkerListing` records, not by a single worker-level profession field
+- Categories and subcategories use `imageUrl` for UI images instead of icon fields
 - Bookings support both `DIRECT` and `SCHEDULED`
 - `scheduledDate`, `slotStart`, and `slotEnd` stay nullable for direct bookings
 - Reviews are allowed only once per completed booking
@@ -76,6 +81,7 @@ npm run dev
 - Request mutation endpoints are client-only and ownership-checked
 - Offer creation and withdrawal are worker-only
 - Booking cancellation is client-only, while booking accept/decline/complete is worker-only
+- Admin taxonomy routes require an authenticated user with role `ADMIN`
 
 ## Taxonomy seed
 
@@ -84,6 +90,8 @@ The seed creates these categories and subcategories:
 - `Works`: Plumbing, Painting, Electricity, Waterproofing, Locksmith, Drywall
 - `Beauty`: Hair, Makeup
 - `Health`: Nursing, Physio
+
+If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set, `npm run seed` also creates or updates an `ADMIN` user.
 
 ## API response format
 
@@ -124,6 +132,16 @@ Error:
 
 - `GET /api/taxonomy/categories`
 - `GET /api/taxonomy/categories/:categoryId/subcategories`
+
+### Admin taxonomy
+
+- `GET /api/admin/categories`
+- `POST /api/admin/categories`
+- `PATCH /api/admin/categories/:categoryId`
+- `DELETE /api/admin/categories/:categoryId`
+- `POST /api/admin/categories/:categoryId/subcategories`
+- `PATCH /api/admin/subcategories/:subcategoryId`
+- `DELETE /api/admin/subcategories/:subcategoryId`
 
 ### Workers
 
@@ -276,6 +294,84 @@ This matches the mobile flow:
 - `requestMode`: text, optional, usually `OPEN_REQUEST`
 - `images`: file, optional, repeat this key for multiple photos
 
+The returned request payload includes:
+
+```json
+{
+  "images": [
+    {
+      "id": "image_cuid",
+      "imageUrl": "/uploads/requests/images/file.jpg",
+      "displayOrder": 0
+    }
+  ]
+}
+```
+
+## Admin taxonomy form-data
+
+Admin taxonomy create/update endpoints accept `multipart/form-data`. Send either `imageUrl` as text or an `image` file. If both are sent, the uploaded file is used.
+
+`POST /api/admin/categories`:
+
+- `name`: text, required
+- `slug`: text, optional; generated from name when omitted
+- `displayOrder`: text/number, optional
+- `imageUrl`: text, optional
+- `image`: file, optional
+
+`PATCH /api/admin/categories/:categoryId`:
+
+- `name`: text, optional
+- `slug`: text, optional
+- `displayOrder`: text/number, optional
+- `imageUrl`: text, optional; send empty string to clear the image
+- `image`: file, optional
+
+`POST /api/admin/categories/:categoryId/subcategories`:
+
+- `name`: text, required
+- `slug`: text, optional; generated from name when omitted
+- `displayOrder`: text/number, optional
+- `imageUrl`: text, optional
+- `image`: file, optional
+
+`PATCH /api/admin/subcategories/:subcategoryId`:
+
+- `name`: text, optional
+- `slug`: text, optional
+- `displayOrder`: text/number, optional
+- `imageUrl`: text, optional; send empty string to clear the image
+- `image`: file, optional
+
+Category response shape:
+
+```json
+{
+  "id": "category_cuid",
+  "name": "Works",
+  "slug": "works",
+  "imageUrl": "/uploads/taxonomy/images/works.jpg",
+  "displayOrder": 1,
+  "subcategories": [
+    {
+      "id": "subcategory_cuid",
+      "categoryId": "category_cuid",
+      "name": "Plumbing",
+      "slug": "plumbing",
+      "imageUrl": "/uploads/taxonomy/images/plumbing.jpg",
+      "displayOrder": 1
+    }
+  ]
+}
+```
+
+Delete rules:
+
+- A category cannot be deleted while listings or client requests depend on it
+- A subcategory cannot be deleted while listings or client requests depend on it
+- Deleting an unused category also deletes its unused subcategories
+
 ## Important query params
 
 ### `GET /api/workers`
@@ -300,6 +396,14 @@ This matches the mobile flow:
 - `status`
 - `page`
 - `pageSize`
+
+## Image fields in read responses
+
+- `GET /api/taxonomy/categories` returns `imageUrl` for each category and subcategory
+- Listing reads return `portfolio` with uploaded gallery photos
+- Client request reads return `images` with uploaded request photos
+- Booking reads include listing `portfolio` and, for request-offer bookings, request `images`
+- Worker dashboard opportunities and request-based jobs include request photos
 
 ### `GET /api/bookings/my`
 
@@ -370,7 +474,7 @@ Postman assets are generated in [docs/postman/artisan-marketplace.postman_collec
 
 - Zod validates request body, params, and query
 - JWT middleware protects private endpoints
-- Role middleware guards `CLIENT` vs `WORKER`
+- Role middleware guards `CLIENT`, `WORKER`, and `ADMIN`
 - Ownership checks protect listings, bookings, requests, offers, favorites, and reviews
 
 ## Useful commands

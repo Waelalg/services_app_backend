@@ -10,6 +10,7 @@ datasource db {
 enum UserRole {
   CLIENT
   WORKER
+  ADMIN
 }
 
 enum PricingType {
@@ -112,9 +113,10 @@ model Category {
   id            String         @id @default(cuid())
   name          String         @unique
   slug          String         @unique
-  icon          String?
+  imageUrl      String?
   displayOrder  Int            @default(0)
   createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
 
   subcategories Subcategory[]
   listings      WorkerListing[]
@@ -126,8 +128,10 @@ model Subcategory {
   categoryId    String
   name          String
   slug          String
+  imageUrl      String?
   displayOrder  Int            @default(0)
   createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
 
   category      Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   listings      WorkerListing[]

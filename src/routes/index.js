@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import authRoutes from './auth.routes.js';
+import adminRoutes from './admin.routes.js';
 import taxonomyRoutes from './taxonomy.routes.js';
 import workersRoutes from './workers.routes.js';
 import listingsRoutes from './listings.routes.js';
@@ -18,6 +19,7 @@ router.get('/health', (req, res) => {
 });
 
 router.use('/auth', authRoutes);
+router.use('/admin', adminRoutes);
 router.use('/taxonomy', taxonomyRoutes);
 router.use('/workers', workersRoutes);
 router.use('/listings', listingsRoutes);

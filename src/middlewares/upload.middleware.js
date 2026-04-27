@@ -47,3 +47,4 @@ function createUploader(folderName) {
 
 export const listingGalleryUpload = createUploader(path.join('listings', 'gallery')).array('images', 10);
 export const clientRequestImagesUpload = createUploader(path.join('requests', 'images')).array('images', 6);
+export const taxonomyImageUpload = createUploader(path.join('taxonomy', 'images')).single('image');

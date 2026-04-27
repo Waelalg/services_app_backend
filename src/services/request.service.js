@@ -312,7 +312,9 @@ export async function getOpportunities(userId, query) {
               portfolioImages: true
             }
           },
-          clientRequest: true
+          clientRequest: {
+            include: requestBaseInclude
+          }
         },
         orderBy: { createdAt: 'desc' },
         skip: pagination.skip,
@@ -571,7 +573,9 @@ export async function acceptOffer(clientId, offerId) {
             portfolioImages: true
           }
         },
-        clientRequest: true
+        clientRequest: {
+          include: requestBaseInclude
+        }
       }
     });
 

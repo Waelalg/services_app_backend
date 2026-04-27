@@ -4,3 +4,11 @@ export function toPublicUploadPath(filePath) {
   const relative = path.relative(path.join(process.cwd(), 'uploads'), filePath);
   return `/uploads/${relative.split(path.sep).join('/')}`;
 }
+
+export function resolvePublicUploadPath(publicPath) {
+  if (!publicPath?.startsWith('/uploads/')) {
+    return null;
+  }
+
+  return path.join(process.cwd(), publicPath.replace(/^\//, ''));
+}

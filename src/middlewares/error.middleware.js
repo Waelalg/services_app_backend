@@ -18,9 +18,10 @@ function formatZodErrors(issues) {
 }
 
 function cleanupUploadedFiles(req) {
-  const files = Array.isArray(req.files)
-    ? req.files
-    : Object.values(req.files || {}).flat();
+  const files = [
+    ...(req.file ? [req.file] : []),
+    ...(Array.isArray(req.files) ? req.files : Object.values(req.files || {}).flat())
+  ];
 
   for (const file of files) {
     if (file?.path && fs.existsSync(file.path)) {

@@ -76,6 +76,9 @@ export async function getClientRequestOrThrow(requestId, tx = prisma) {
           }
         },
         orderBy: { createdAt: 'desc' }
+      },
+      images: {
+        orderBy: { displayOrder: 'asc' }
       }
     }
   });
@@ -105,7 +108,16 @@ export async function getBookingOrThrow(bookingId, tx = prisma) {
           portfolioImages: { orderBy: { displayOrder: 'asc' } }
         }
       },
-      clientRequest: true,
+      clientRequest: {
+        include: {
+          category: true,
+          subcategory: true,
+          client: true,
+          images: {
+            orderBy: { displayOrder: 'asc' }
+          }
+        }
+      },
       review: true
     }
   });

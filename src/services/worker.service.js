@@ -2,7 +2,13 @@ import { prisma } from '../config/prisma.js';
 import { AppError } from '../errors/app-error.js';
 import { StatusCodes } from 'http-status-codes';
 import { buildPaginationMeta, getPagination } from '../utils/pagination.js';
-import { decimalToNumber, serializeListing, serializeReview, serializeWorkerProfile } from '../utils/serializers.js';
+import {
+  decimalToNumber,
+  serializeClientRequest,
+  serializeListing,
+  serializeReview,
+  serializeWorkerProfile
+} from '../utils/serializers.js';
 import { getWorkerProfileByUserIdOrThrow } from './shared.service.js';
 
 function mapWorkerSort(sort) {
@@ -361,7 +367,16 @@ export async function getWorkerDashboard(userId) {
             portfolioImages: true
           }
         },
-        clientRequest: true
+        clientRequest: {
+          include: {
+            category: true,
+            subcategory: true,
+            client: true,
+            images: {
+              orderBy: { displayOrder: 'asc' }
+            }
+          }
+        }
       },
       orderBy: { createdAt: 'desc' },
       take: 5
@@ -389,7 +404,16 @@ export async function getWorkerDashboard(userId) {
             portfolioImages: true
           }
         },
-        clientRequest: true
+        clientRequest: {
+          include: {
+            category: true,
+            subcategory: true,
+            client: true,
+            images: {
+              orderBy: { displayOrder: 'asc' }
+            }
+          }
+        }
       },
       orderBy: [{ scheduledDate: 'asc' }, { slotStart: 'asc' }],
       take: 5
@@ -438,7 +462,10 @@ export async function getWorkerDashboard(userId) {
           include: {
             category: true,
             subcategory: true,
-            client: true
+            client: true,
+            images: {
+              orderBy: { displayOrder: 'asc' }
+            }
           },
           orderBy: { createdAt: 'desc' },
           take: 5
@@ -474,28 +501,10 @@ export async function getWorkerDashboard(userId) {
         lastName: booking.client.lastName,
         fullName: `${booking.client.firstName} ${booking.client.lastName}`.trim()
       },
-      listing: booking.listing ? serializeListing(booking.listing) : null
+      listing: booking.listing ? serializeListing(booking.listing) : null,
+      request: booking.clientRequest ? serializeClientRequest(booking.clientRequest) : null
     })),
-    recentOpportunities: recentOpportunities.map((request) => ({
-      id: request.id,
-      title: request.title,
-      wilaya: request.wilaya,
-      commune: request.commune,
-      status: request.status,
-      createdAt: request.createdAt.toISOString(),
-      category: request.category
-        ? {
-            id: request.category.id,
-            name: request.category.name
-          }
-        : null,
-      subcategory: request.subcategory
-        ? {
-            id: request.subcategory.id,
-            name: request.subcategory.name
-          }
-        : null
-    })),
+    recentOpportunities: recentOpportunities.map(serializeClientRequest),
     upcomingJobs: upcomingJobs.map((booking) => ({
       id: booking.id,
       status: booking.status,
@@ -508,7 +517,8 @@ export async function getWorkerDashboard(userId) {
         lastName: booking.client.lastName,
         fullName: `${booking.client.firstName} ${booking.client.lastName}`.trim()
       },
-      listing: booking.listing ? serializeListing(booking.listing) : null
+      listing: booking.listing ? serializeListing(booking.listing) : null,
+      request: booking.clientRequest ? serializeClientRequest(booking.clientRequest) : null
     }))
   };
 }

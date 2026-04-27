@@ -194,7 +194,7 @@
               "type": "noauth"
             },
             "method": "GET",
-            "description": "Fetch all categories with nested subcategories.",
+            "description": "Fetch all categories with nested subcategories. Categories and subcategories return imageUrl fields for mobile UI images.",
             "url": "{{baseUrl}}/api/taxonomy/categories"
           }
         },
@@ -205,8 +205,259 @@
               "type": "noauth"
             },
             "method": "GET",
-            "description": "Fetch subcategories for one category.",
+            "description": "Fetch subcategories for one category, including imageUrl.",
             "url": "{{baseUrl}}/api/taxonomy/categories/{{categoryId}}/subcategories"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Taxonomy",
+      "item": [
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.token) {",
+                  "  pm.environment.set('jwtToken', json.data.token);",
+                  "}",
+                  "if (json.success && json.data && json.data.user) {",
+                  "  pm.environment.set('userId', json.data.user.id || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authenticate as an admin. Create the admin with ADMIN_EMAIL and ADMIN_PASSWORD, then run npm run seed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Admin List Categories",
+          "request": {
+            "method": "GET",
+            "description": "Admin paginated taxonomy list. Returns category imageUrl, subcategory imageUrl, and dependency counts.",
+            "url": "{{baseUrl}}/api/admin/categories?search=work&page=1&pageSize=10"
+          }
+        },
+        {
+          "name": "Admin Create Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.id) {",
+                  "  pm.environment.set('categoryId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "description": "Create a category using multipart form-data. Send either imageUrl as text or enable the image file field. If both are sent, the uploaded file is used.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Home Services",
+                  "type": "text"
+                },
+                {
+                  "key": "slug",
+                  "value": "home-services",
+                  "type": "text"
+                },
+                {
+                  "key": "displayOrder",
+                  "value": "10",
+                  "type": "text"
+                },
+                {
+                  "key": "imageUrl",
+                  "value": "https://example.com/categories/home-services.jpg",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/admin/categories"
+          }
+        },
+        {
+          "name": "Admin Update Category",
+          "request": {
+            "method": "PATCH",
+            "description": "Update category fields or replace its image. Use multipart form-data; image file is optional.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Home Services Updated",
+                  "type": "text"
+                },
+                {
+                  "key": "slug",
+                  "value": "home-services-updated",
+                  "type": "text"
+                },
+                {
+                  "key": "displayOrder",
+                  "value": "11",
+                  "type": "text"
+                },
+                {
+                  "key": "imageUrl",
+                  "value": "https://example.com/categories/home-services-updated.jpg",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/admin/categories/{{categoryId}}"
+          }
+        },
+        {
+          "name": "Admin Delete Category",
+          "request": {
+            "method": "DELETE",
+            "description": "Delete a category only when no listings or client requests depend on it. Subcategories under an unused category are removed by cascade.",
+            "url": "{{baseUrl}}/api/admin/categories/{{categoryId}}"
+          }
+        },
+        {
+          "name": "Admin Create Subcategory",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data && json.data.id) {",
+                  "  pm.environment.set('subcategoryId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "description": "Create a subcategory under the selected category. Send imageUrl as text or enable the image file field.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Window Repair",
+                  "type": "text"
+                },
+                {
+                  "key": "slug",
+                  "value": "window-repair",
+                  "type": "text"
+                },
+                {
+                  "key": "displayOrder",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "imageUrl",
+                  "value": "https://example.com/subcategories/window-repair.jpg",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/admin/categories/{{categoryId}}/subcategories"
+          }
+        },
+        {
+          "name": "Admin Update Subcategory",
+          "request": {
+            "method": "PATCH",
+            "description": "Update subcategory fields or replace its image. Use multipart form-data; image file is optional.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Window Repair Updated",
+                  "type": "text"
+                },
+                {
+                  "key": "slug",
+                  "value": "window-repair-updated",
+                  "type": "text"
+                },
+                {
+                  "key": "displayOrder",
+                  "value": "2",
+                  "type": "text"
+                },
+                {
+                  "key": "imageUrl",
+                  "value": "https://example.com/subcategories/window-repair-updated.jpg",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/admin/subcategories/{{subcategoryId}}"
+          }
+        },
+        {
+          "name": "Admin Delete Subcategory",
+          "request": {
+            "method": "DELETE",
+            "description": "Delete a subcategory only when no listings or client requests depend on it.",
+            "url": "{{baseUrl}}/api/admin/subcategories/{{subcategoryId}}"
           }
         }
       ]
@@ -1059,6 +1310,14 @@
     {
       "key": "bookingId",
       "value": ""
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@example.com"
+    },
+    {
+      "key": "adminPassword",
+      "value": "AdminPass123"
     }
   ]
 }
