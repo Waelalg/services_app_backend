@@ -17,4 +17,5 @@ export const REQUEST_VISIBLE_STATUSES = ['OPEN', 'OFFERED'];
 export const OFFER_STATUSES = ['SENT', 'ACCEPTED', 'REJECTED', 'WITHDRAWN'];
 
 export const WORKER_SORT_OPTIONS = ['newest', 'topRated', 'mostCompleted'];
+export const LISTING_SERVICE_SORT_OPTIONS = ['newest', 'topRated', 'mostCompleted', 'priceLow', 'priceHigh'];
 export const OPPORTUNITY_TABS = ['explore', 'offers', 'confirmed'];

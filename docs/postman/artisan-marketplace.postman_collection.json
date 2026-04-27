@@ -542,6 +542,29 @@
       "name": "Listings",
       "item": [
         {
+          "name": "Browse Services By Subcategory",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && Array.isArray(json.data) && json.data.length > 0) {",
+                  "  pm.environment.set('listingId', json.data[0].id);",
+                  "  if (json.data[0].worker && json.data[0].worker.id) pm.environment.set('workerId', json.data[0].worker.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "description": "Client-facing service feed for the flow: choose category, choose subcategory, then show all published services posted by workers in that subcategory. categoryId is optional and only used as a safety check. Auth is optional; when a client token is sent, isFavorite is hydrated. Each item includes portfolio images, work areas, category/subcategory images, worker public info, rating, and pricing.",
+            "url": "{{baseUrl}}/api/listings/services?subcategoryId={{subcategoryId}}&wilaya=Biskra&commune=Doucen&search=repair&minRating=0&sort=newest&page=1&pageSize=10"
+          }
+        },
+        {
           "name": "Create Listing",
           "event": [
             {

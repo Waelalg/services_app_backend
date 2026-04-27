@@ -5,6 +5,7 @@ import {
   addPortfolioImage,
   addTimeOff,
   addWorkArea,
+  browsePublishedServiceListings,
   createListing,
   deleteAvailabilityRule,
   deleteListing,
@@ -20,6 +21,15 @@ import {
   updateListing
 } from '../services/listing.service.js';
 import { sendSuccess } from '../utils/api-response.js';
+
+export const browseServiceListings = asyncHandler(async (req, res) => {
+  const result = await browsePublishedServiceListings(req.user ?? null, req.query);
+  return sendSuccess(res, {
+    message: 'Service listings fetched successfully',
+    data: result.items,
+    meta: result.meta
+  });
+});
 
 export const createWorkerListing = asyncHandler(async (req, res) => {
   const listing = await createListing(req.user.id, req.body, req.files ?? []);

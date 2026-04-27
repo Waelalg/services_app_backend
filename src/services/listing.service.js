@@ -30,6 +30,110 @@ const listingInclude = {
   }
 };
 
+function mapServiceListingSort(sort) {
+  switch (sort) {
+    case 'topRated':
+      return [
+        { workerProfile: { ratingAvg: 'desc' } },
+        { workerProfile: { ratingCount: 'desc' } },
+        { createdAt: 'desc' }
+      ];
+    case 'mostCompleted':
+      return [
+        { workerProfile: { completedRequests: 'desc' } },
+        { workerProfile: { ratingAvg: 'desc' } },
+        { createdAt: 'desc' }
+      ];
+    case 'priceLow':
+      return [{ priceFrom: 'asc' }, { createdAt: 'desc' }];
+    case 'priceHigh':
+      return [{ priceFrom: 'desc' }, { createdAt: 'desc' }];
+    case 'newest':
+    default:
+      return [{ createdAt: 'desc' }];
+  }
+}
+
+export async function browsePublishedServiceListings(currentUser, query) {
+  if (query.categoryId) {
+    await assertCategorySubcategory(query.categoryId, query.subcategoryId);
+  }
+
+  const pagination = getPagination(query);
+  const where = {
+    ...(query.categoryId ? { categoryId: query.categoryId } : {}),
+    subcategoryId: query.subcategoryId,
+    isPublished: true,
+    status: 'PUBLISHED',
+    workerProfile: {
+      user: {
+        isActive: true
+      },
+      ...(query.minRating !== undefined
+        ? {
+            ratingAvg: {
+              gte: query.minRating
+            }
+          }
+        : {})
+    },
+    ...(query.wilaya || query.commune
+      ? {
+          workAreas: {
+            some: {
+              ...(query.wilaya ? { wilaya: query.wilaya } : {}),
+              ...(query.commune ? { commune: query.commune } : {})
+            }
+          }
+        }
+      : {}),
+    ...(query.search
+      ? {
+          OR: [
+            { title: { contains: query.search, mode: 'insensitive' } },
+            { description: { contains: query.search, mode: 'insensitive' } }
+          ]
+        }
+      : {})
+  };
+
+  const [total, listings] = await prisma.$transaction([
+    prisma.workerListing.count({ where }),
+    prisma.workerListing.findMany({
+      where,
+      include: {
+        ...listingInclude,
+        workerProfile: {
+          include: {
+            user: true,
+            favoritedBy:
+              currentUser?.role === 'CLIENT'
+                ? {
+                    where: {
+                      clientId: currentUser.id
+                    },
+                    select: { id: true }
+                  }
+                : false
+          }
+        }
+      },
+      orderBy: mapServiceListingSort(query.sort),
+      skip: pagination.skip,
+      take: pagination.take
+    })
+  ]);
+
+  return {
+    items: listings.map((listing) => ({
+      ...serializeListing(listing),
+      worker: serializeWorkerProfile(listing.workerProfile),
+      isFavorite: Boolean(listing.workerProfile.favoritedBy?.length)
+    })),
+    meta: buildPaginationMeta({ ...pagination, total })
+  };
+}
+
 export async function createListing(userId, payload, files = []) {
   const workerProfile = await getWorkerProfileByUserIdOrThrow(userId);
   await assertCategorySubcategory(payload.categoryId, payload.subcategoryId);

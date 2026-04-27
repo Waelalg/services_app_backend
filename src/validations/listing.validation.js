@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LISTING_STATUSES, PRICING_TYPES } from '../constants/enums.js';
+import { LISTING_SERVICE_SORT_OPTIONS, LISTING_STATUSES, PRICING_TYPES } from '../constants/enums.js';
 import { isStartBeforeEnd } from '../utils/date-time.js';
 import {
   cuidSchema,
@@ -141,4 +141,14 @@ export const myListingsQuerySchema = paginationQuerySchema.extend({
   isPublished: z
     .union([z.boolean(), z.string().transform((value) => value === 'true')])
     .optional()
+});
+
+export const serviceListingsQuerySchema = paginationQuerySchema.extend({
+  categoryId: cuidSchema.optional(),
+  subcategoryId: cuidSchema,
+  wilaya: z.string().trim().min(1).max(120).optional(),
+  commune: z.string().trim().min(1).max(120).optional(),
+  search: z.string().trim().min(1).max(120).optional(),
+  minRating: z.coerce.number().min(0).max(5).optional(),
+  sort: z.enum(LISTING_SERVICE_SORT_OPTIONS).default('newest')
 });

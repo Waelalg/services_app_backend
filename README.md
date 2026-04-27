@@ -155,6 +155,7 @@ Error:
 
 ### Listings
 
+- `GET /api/listings/services`
 - `POST /api/listings`
 - `GET /api/listings/me`
 - `GET /api/listings/:listingId`
@@ -385,6 +386,28 @@ Delete rules:
 - `sort=newest|topRated|mostCompleted`
 - `page`
 - `pageSize`
+
+### `GET /api/listings/services`
+
+Use this for the client flow where the user chooses a category, then a subcategory, and then sees all published services posted by workers in that subcategory.
+
+- `subcategoryId`: required
+- `categoryId`: optional safety filter; if sent, the API verifies the subcategory belongs to it
+- `wilaya`: optional
+- `commune`: optional
+- `search`: optional, searches listing title and description
+- `minRating`: optional, `0` to `5`
+- `sort`: optional, `newest|topRated|mostCompleted|priceLow|priceHigh`
+- `page`
+- `pageSize`
+
+Example:
+
+```http
+GET /api/listings/services?subcategoryId=subcategory_cuid&page=1&pageSize=10
+```
+
+Each item returns the worker service listing with `portfolio` pictures, work areas, category, subcategory, worker public info, worker rating, and `isFavorite` when a client token is sent.
 
 ### `GET /api/requests/opportunities`
 

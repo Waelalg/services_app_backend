@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  browseServiceListings,
   createAvailabilityRule,
   createPortfolioImage,
   createTimeOff,
@@ -31,6 +32,7 @@ import {
   myListingsQuerySchema,
   portfolioImageIdParamsSchema,
   portfolioImageSchema,
+  serviceListingsQuerySchema,
   timeOffIdParamsSchema,
   timeOffSchema,
   updateAvailabilityRuleSchema,
@@ -41,6 +43,7 @@ import {
 
 const router = Router();
 
+router.get('/services', optionalAuth, validateRequest({ query: serviceListingsQuerySchema }), browseServiceListings);
 router.get('/me', requireAuth, requireRole('WORKER'), validateRequest({ query: myListingsQuerySchema }), listMyListings);
 router.get('/:listingId/available-slots', validateRequest({ params: listingIdParamsSchema, query: availableSlotsQuerySchema }), listingAvailableSlots);
 router.get('/:listingId', optionalAuth, validateRequest({ params: listingIdParamsSchema }), getListing);
