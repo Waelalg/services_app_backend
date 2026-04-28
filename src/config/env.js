@@ -8,5 +8,7 @@ export const env = {
   clientUrl: process.env.CLIENT_URL || 'http://localhost:3000',
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET || 'change_me',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d'
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  cloudinaryUrl: process.env.CLOUDINARY_URL || '',
+  cloudinaryUploadFolder: process.env.CLOUDINARY_UPLOAD_FOLDER || 'artisan-marketplace'
 };

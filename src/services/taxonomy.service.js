@@ -4,18 +4,28 @@ import { AppError } from '../errors/app-error.js';
 import { buildPaginationMeta, getPagination } from '../utils/pagination.js';
 import { serializeCategory, serializeSubcategory } from '../utils/serializers.js';
 import { slugify } from '../utils/slug.js';
-import { toPublicUploadPath } from '../utils/uploads.js';
+import {
+  destroyUploadedAssets,
+  extractCloudinaryPublicId,
+  uploadImageFile
+} from '../utils/uploads.js';
 
-function resolveImageUrl(payload, file) {
+async function resolveImageAsset(payload, file, folder) {
   if (file) {
-    return toPublicUploadPath(file.path);
+    return uploadImageFile(file, { folder });
   }
 
   if (Object.prototype.hasOwnProperty.call(payload, 'imageUrl')) {
-    return payload.imageUrl ?? null;
+    return {
+      imageUrl: payload.imageUrl ?? null,
+      publicId: null
+    };
   }
 
-  return undefined;
+  return {
+    imageUrl: undefined,
+    publicId: null
+  };
 }
 
 function buildSlug(payload, fallbackName) {
@@ -98,22 +108,28 @@ export async function adminListCategories(query) {
 export async function adminCreateCategory(payload, file) {
   const slug = buildSlug(payload, payload.name);
   assertSlug(slug);
+  const asset = await resolveImageAsset(payload, file, 'taxonomy/images/categories');
 
-  const category = await prisma.category.create({
-    data: {
-      name: payload.name,
-      slug,
-      imageUrl: resolveImageUrl(payload, file) ?? null,
-      displayOrder: payload.displayOrder
-    },
-    include: {
-      subcategories: {
-        orderBy: { displayOrder: 'asc' }
+  try {
+    const category = await prisma.category.create({
+      data: {
+        name: payload.name,
+        slug,
+        imageUrl: asset.imageUrl ?? null,
+        displayOrder: payload.displayOrder
+      },
+      include: {
+        subcategories: {
+          orderBy: { displayOrder: 'asc' }
+        }
       }
-    }
-  });
+    });
 
-  return serializeCategory(category, { includeSubcategories: true });
+    return serializeCategory(category, { includeSubcategories: true });
+  } catch (error) {
+    await destroyUploadedAssets([asset.publicId]);
+    throw error;
+  }
 }
 
 export async function adminUpdateCategory(categoryId, payload, file) {
@@ -125,13 +141,13 @@ export async function adminUpdateCategory(categoryId, payload, file) {
     throw new AppError('Category not found', StatusCodes.NOT_FOUND);
   }
 
-  const imageUrl = resolveImageUrl(payload, file);
+  const asset = await resolveImageAsset(payload, file, 'taxonomy/images/categories');
   const nextSlug = payload.slug;
 
   const data = {
     ...(payload.name ? { name: payload.name } : {}),
     ...(nextSlug ? { slug: nextSlug } : {}),
-    ...(typeof imageUrl !== 'undefined' ? { imageUrl } : {}),
+    ...(typeof asset.imageUrl !== 'undefined' ? { imageUrl: asset.imageUrl } : {}),
     ...(Object.prototype.hasOwnProperty.call(payload, 'displayOrder')
       ? { displayOrder: payload.displayOrder }
       : {})
@@ -141,17 +157,31 @@ export async function adminUpdateCategory(categoryId, payload, file) {
     throw new AppError('At least one field or image file is required', StatusCodes.BAD_REQUEST);
   }
 
-  const updated = await prisma.category.update({
-    where: { id: categoryId },
-    data,
-    include: {
-      subcategories: {
-        orderBy: { displayOrder: 'asc' }
-      }
-    }
-  });
+  const previousPublicId = extractCloudinaryPublicId(existing.imageUrl);
+  const nextPublicId =
+    asset.publicId ??
+    (typeof asset.imageUrl !== 'undefined' ? extractCloudinaryPublicId(asset.imageUrl) : previousPublicId);
 
-  return serializeCategory(updated, { includeSubcategories: true });
+  try {
+    const updated = await prisma.category.update({
+      where: { id: categoryId },
+      data,
+      include: {
+        subcategories: {
+          orderBy: { displayOrder: 'asc' }
+        }
+      }
+    });
+
+    if (previousPublicId && previousPublicId !== nextPublicId) {
+      await destroyUploadedAssets([previousPublicId]);
+    }
+
+    return serializeCategory(updated, { includeSubcategories: true });
+  } catch (error) {
+    await destroyUploadedAssets([asset.publicId]);
+    throw error;
+  }
 }
 
 export async function adminDeleteCategory(categoryId) {
@@ -178,6 +208,8 @@ export async function adminDeleteCategory(categoryId) {
   await prisma.category.delete({
     where: { id: categoryId }
   });
+
+  await destroyUploadedAssets([extractCloudinaryPublicId(category.imageUrl)]);
 }
 
 export async function adminCreateSubcategory(categoryId, payload, file) {
@@ -192,18 +224,24 @@ export async function adminCreateSubcategory(categoryId, payload, file) {
 
   const slug = buildSlug(payload, payload.name);
   assertSlug(slug);
+  const asset = await resolveImageAsset(payload, file, 'taxonomy/images/subcategories');
 
-  const subcategory = await prisma.subcategory.create({
-    data: {
-      categoryId,
-      name: payload.name,
-      slug,
-      imageUrl: resolveImageUrl(payload, file) ?? null,
-      displayOrder: payload.displayOrder
-    }
-  });
+  try {
+    const subcategory = await prisma.subcategory.create({
+      data: {
+        categoryId,
+        name: payload.name,
+        slug,
+        imageUrl: asset.imageUrl ?? null,
+        displayOrder: payload.displayOrder
+      }
+    });
 
-  return serializeSubcategory(subcategory);
+    return serializeSubcategory(subcategory);
+  } catch (error) {
+    await destroyUploadedAssets([asset.publicId]);
+    throw error;
+  }
 }
 
 export async function adminUpdateSubcategory(subcategoryId, payload, file) {
@@ -215,13 +253,13 @@ export async function adminUpdateSubcategory(subcategoryId, payload, file) {
     throw new AppError('Subcategory not found', StatusCodes.NOT_FOUND);
   }
 
-  const imageUrl = resolveImageUrl(payload, file);
+  const asset = await resolveImageAsset(payload, file, 'taxonomy/images/subcategories');
   const nextSlug = payload.slug;
 
   const data = {
     ...(payload.name ? { name: payload.name } : {}),
     ...(nextSlug ? { slug: nextSlug } : {}),
-    ...(typeof imageUrl !== 'undefined' ? { imageUrl } : {}),
+    ...(typeof asset.imageUrl !== 'undefined' ? { imageUrl: asset.imageUrl } : {}),
     ...(Object.prototype.hasOwnProperty.call(payload, 'displayOrder')
       ? { displayOrder: payload.displayOrder }
       : {})
@@ -231,12 +269,26 @@ export async function adminUpdateSubcategory(subcategoryId, payload, file) {
     throw new AppError('At least one field or image file is required', StatusCodes.BAD_REQUEST);
   }
 
-  const updated = await prisma.subcategory.update({
-    where: { id: subcategoryId },
-    data
-  });
+  const previousPublicId = extractCloudinaryPublicId(existing.imageUrl);
+  const nextPublicId =
+    asset.publicId ??
+    (typeof asset.imageUrl !== 'undefined' ? extractCloudinaryPublicId(asset.imageUrl) : previousPublicId);
 
-  return serializeSubcategory(updated);
+  try {
+    const updated = await prisma.subcategory.update({
+      where: { id: subcategoryId },
+      data
+    });
+
+    if (previousPublicId && previousPublicId !== nextPublicId) {
+      await destroyUploadedAssets([previousPublicId]);
+    }
+
+    return serializeSubcategory(updated);
+  } catch (error) {
+    await destroyUploadedAssets([asset.publicId]);
+    throw error;
+  }
 }
 
 export async function adminDeleteSubcategory(subcategoryId) {
@@ -263,4 +315,6 @@ export async function adminDeleteSubcategory(subcategoryId) {
   await prisma.subcategory.delete({
     where: { id: subcategoryId }
   });
+
+  await destroyUploadedAssets([extractCloudinaryPublicId(subcategory.imageUrl)]);
 }

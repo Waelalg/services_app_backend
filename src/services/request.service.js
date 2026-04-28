@@ -5,7 +5,7 @@ import { AppError } from '../errors/app-error.js';
 import { buildPaginationMeta, getPagination } from '../utils/pagination.js';
 import { serializeBooking, serializeClientRequest, serializeOffer } from '../utils/serializers.js';
 import { toUtcDateOnly } from '../utils/date-time.js';
-import { toPublicUploadPath } from '../utils/uploads.js';
+import { destroyUploadedAssets, uploadImageFiles } from '../utils/uploads.js';
 import { assertWorkerHasNoConfirmedOverlap } from './booking.service.js';
 import { assertCategorySubcategory, getWorkerProfileByUserIdOrThrow } from './shared.service.js';
 
@@ -65,34 +65,42 @@ export async function createClientRequest(clientId, payload, files = []) {
   }
 
   await assertCategorySubcategory(payload.categoryId, payload.subcategoryId);
+  const uploadedImages = files.length
+    ? await uploadImageFiles(files, { folder: 'requests/images' })
+    : [];
 
-  const request = await prisma.clientRequest.create({
-    data: {
-      clientId,
-      categoryId: payload.categoryId,
-      subcategoryId: payload.subcategoryId ?? null,
-      title: payload.title,
-      description: payload.description,
-      wilaya: payload.wilaya,
-      commune: payload.commune,
-      addressLine: payload.addressLine ?? null,
-      preferredDate: payload.preferredDate ? toUtcDateOnly(payload.preferredDate) : null,
-      preferredTime: payload.preferredTime ?? null,
-      requestMode: 'OPEN_REQUEST',
-      status: 'OPEN',
-      images: files.length
-        ? {
-            create: files.map((file, index) => ({
-              imageUrl: toPublicUploadPath(file.path),
-              displayOrder: index
-            }))
-          }
-        : undefined
-    },
-    include: requestBaseInclude
-  });
+  try {
+    const request = await prisma.clientRequest.create({
+      data: {
+        clientId,
+        categoryId: payload.categoryId,
+        subcategoryId: payload.subcategoryId ?? null,
+        title: payload.title,
+        description: payload.description,
+        wilaya: payload.wilaya,
+        commune: payload.commune,
+        addressLine: payload.addressLine ?? null,
+        preferredDate: payload.preferredDate ? toUtcDateOnly(payload.preferredDate) : null,
+        preferredTime: payload.preferredTime ?? null,
+        requestMode: 'OPEN_REQUEST',
+        status: 'OPEN',
+        images: uploadedImages.length
+          ? {
+              create: uploadedImages.map((asset, index) => ({
+                imageUrl: asset.imageUrl,
+                displayOrder: index
+              }))
+            }
+          : undefined
+      },
+      include: requestBaseInclude
+    });
 
-  return serializeClientRequest(request);
+    return serializeClientRequest(request);
+  } catch (error) {
+    await destroyUploadedAssets(uploadedImages.map((asset) => asset.publicId));
+    throw error;
+  }
 }
 
 export async function updateClientRequest(clientId, requestId, payload) {

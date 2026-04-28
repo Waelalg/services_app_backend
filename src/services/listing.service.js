@@ -5,7 +5,11 @@ import { buildAvailableSlots } from '../utils/availability.js';
 import { toUtcDateOnly } from '../utils/date-time.js';
 import { buildPaginationMeta, getPagination } from '../utils/pagination.js';
 import { serializeListing, serializeWorkerProfile } from '../utils/serializers.js';
-import { toPublicUploadPath } from '../utils/uploads.js';
+import {
+  destroyUploadedAssets,
+  extractCloudinaryPublicId,
+  uploadImageFiles
+} from '../utils/uploads.js';
 import {
   assertCategorySubcategory,
   getOwnedListingOrThrow,
@@ -138,50 +142,59 @@ export async function createListing(userId, payload, files = []) {
   const workerProfile = await getWorkerProfileByUserIdOrThrow(userId);
   await assertCategorySubcategory(payload.categoryId, payload.subcategoryId);
 
-  const listing = await prisma.workerListing.create({
-    data: {
-      workerProfileId: workerProfile.id,
-      categoryId: payload.categoryId,
-      subcategoryId: payload.subcategoryId ?? null,
-      title: payload.title,
-      description: payload.description,
-      pricingType: payload.pricingType,
-      priceFrom: payload.priceFrom ?? null,
-      currency: payload.currency.toUpperCase(),
-      status: payload.isPublished ? 'PUBLISHED' : 'DRAFT',
-      isPublished: payload.isPublished ?? false,
-      workAreas: payload.workAreas?.length
-        ? {
-            create: payload.workAreas.map((area) => ({
-              wilaya: area.wilaya,
-              commune: area.commune
-            }))
-          }
-        : undefined,
-      availabilityRules: payload.availabilityRules?.length
-        ? {
-            create: payload.availabilityRules.map((rule) => ({
-              dayOfWeek: rule.dayOfWeek,
-              startTime: rule.startTime,
-              endTime: rule.endTime,
-              slotDurationMinutes: rule.slotDurationMinutes,
-              isActive: rule.isActive
-            }))
-          }
-        : undefined,
-      portfolioImages: files.length
-        ? {
-            create: files.map((file, index) => ({
-              imageUrl: toPublicUploadPath(file.path),
-              displayOrder: index
-            }))
-          }
-        : undefined
-    },
-    include: listingInclude
-  });
+  const uploadedImages = files.length
+    ? await uploadImageFiles(files, { folder: 'listings/gallery' })
+    : [];
 
-  return serializeListing(listing, { includeAvailability: true, includeTimeOff: true });
+  try {
+    const listing = await prisma.workerListing.create({
+      data: {
+        workerProfileId: workerProfile.id,
+        categoryId: payload.categoryId,
+        subcategoryId: payload.subcategoryId ?? null,
+        title: payload.title,
+        description: payload.description,
+        pricingType: payload.pricingType,
+        priceFrom: payload.priceFrom ?? null,
+        currency: payload.currency.toUpperCase(),
+        status: payload.isPublished ? 'PUBLISHED' : 'DRAFT',
+        isPublished: payload.isPublished ?? false,
+        workAreas: payload.workAreas?.length
+          ? {
+              create: payload.workAreas.map((area) => ({
+                wilaya: area.wilaya,
+                commune: area.commune
+              }))
+            }
+          : undefined,
+        availabilityRules: payload.availabilityRules?.length
+          ? {
+              create: payload.availabilityRules.map((rule) => ({
+                dayOfWeek: rule.dayOfWeek,
+                startTime: rule.startTime,
+                endTime: rule.endTime,
+                slotDurationMinutes: rule.slotDurationMinutes,
+                isActive: rule.isActive
+              }))
+            }
+          : undefined,
+        portfolioImages: uploadedImages.length
+          ? {
+              create: uploadedImages.map((asset, index) => ({
+                imageUrl: asset.imageUrl,
+                displayOrder: index
+              }))
+            }
+          : undefined
+      },
+      include: listingInclude
+    });
+
+    return serializeListing(listing, { includeAvailability: true, includeTimeOff: true });
+  } catch (error) {
+    await destroyUploadedAssets(uploadedImages.map((asset) => asset.publicId));
+    throw error;
+  }
 }
 
 export async function updateListing(userId, listingId, payload) {
@@ -318,7 +331,7 @@ export async function getListingById(listingId, user) {
 }
 
 export async function deleteListing(userId, listingId) {
-  await getOwnedListingOrThrow(listingId, userId);
+  const listing = await getOwnedListingOrThrow(listingId, userId);
 
   if (await hasActiveListingBookings(listingId)) {
     throw new AppError('Listing cannot be deleted while it has active bookings', StatusCodes.CONFLICT);
@@ -327,6 +340,10 @@ export async function deleteListing(userId, listingId) {
   await prisma.workerListing.delete({
     where: { id: listingId }
   });
+
+  await destroyUploadedAssets(
+    (listing.portfolioImages || []).map((image) => extractCloudinaryPublicId(image.imageUrl))
+  );
 }
 
 export async function addWorkArea(userId, listingId, payload) {
@@ -417,6 +434,8 @@ export async function deletePortfolioImage(userId, portfolioImageId) {
   await prisma.portfolioImage.delete({
     where: { id: portfolioImageId }
   });
+
+  await destroyUploadedAssets([extractCloudinaryPublicId(image.imageUrl)]);
 }
 
 export async function addAvailabilityRule(userId, listingId, payload) {

@@ -53,6 +53,8 @@ npm run dev
 - `DATABASE_URL`: PostgreSQL / Neon connection string
 - `JWT_SECRET`: signing secret for access tokens
 - `JWT_EXPIRES_IN`: JWT expiry string such as `7d`
+- `CLOUDINARY_URL`: Cloudinary connection string used for image uploads
+- `CLOUDINARY_UPLOAD_FOLDER`: optional Cloudinary base folder. Default `artisan-marketplace`
 - `ADMIN_EMAIL`: optional seed admin email
 - `ADMIN_PASSWORD`: optional seed admin password
 - `ADMIN_FIRST_NAME`: optional seed admin first name
@@ -71,6 +73,7 @@ npm run dev
 - Workers cannot book themselves
 - Public client requests can receive worker offers
 - Accepting an offer creates a confirmed booking linked to that offer
+- Uploaded images are stored in Cloudinary and persisted as hosted HTTPS URLs, which works on Render free instances
 
 ## Role rules
 
@@ -331,7 +334,7 @@ The returned request payload includes:
   "images": [
     {
       "id": "image_cuid",
-      "imageUrl": "/uploads/requests/images/file.jpg",
+      "imageUrl": "https://res.cloudinary.com/your-cloud/image/upload/v123/artisan-marketplace/requests/images/file.jpg",
       "displayOrder": 0
     }
   ]
@@ -381,7 +384,7 @@ Category response shape:
   "id": "category_cuid",
   "name": "Works",
   "slug": "works",
-  "imageUrl": "/uploads/taxonomy/images/works.jpg",
+  "imageUrl": "https://res.cloudinary.com/your-cloud/image/upload/v123/artisan-marketplace/taxonomy/images/categories/works.jpg",
   "displayOrder": 1,
   "subcategories": [
     {
@@ -389,7 +392,7 @@ Category response shape:
       "categoryId": "category_cuid",
       "name": "Plumbing",
       "slug": "plumbing",
-      "imageUrl": "/uploads/taxonomy/images/plumbing.jpg",
+      "imageUrl": "https://res.cloudinary.com/your-cloud/image/upload/v123/artisan-marketplace/taxonomy/images/subcategories/plumbing.jpg",
       "displayOrder": 1
     }
   ]
@@ -456,6 +459,7 @@ Each item returns the worker service listing with `portfolio` pictures, work are
 - Client request reads return `images` with uploaded request photos
 - Booking reads include listing `portfolio` and, for request-offer bookings, request `images`
 - Worker dashboard opportunities and request-based jobs include request photos
+- All uploaded image URLs are Cloudinary-hosted `https://` URLs, not local `/uploads/...` paths
 
 ### `GET /api/bookings/my`
 
