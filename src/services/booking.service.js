@@ -173,6 +173,9 @@ export async function createBooking(clientId, payload) {
       slotEnd: isScheduled ? payload.slotEnd : null,
       note: payload.note ?? null,
       contactPhone: payload.contactPhone ?? null,
+      wilaya: payload.wilaya ?? null,
+      commune: payload.commune ?? null,
+      addressLine: payload.addressLine ?? null,
       status: 'PENDING'
     },
     include: bookingInclude

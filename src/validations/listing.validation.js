@@ -101,7 +101,7 @@ export const createListingSchema = z.object({
   pricingType: z.enum(PRICING_TYPES).default('QUOTE'),
   priceFrom: optionalNullablePositiveNumber,
   currency: z.string().trim().length(3).default('DZD'),
-  isPublished: z.preprocess(parseBooleanField, z.boolean().optional()),
+  isPublished: z.preprocess(parseBooleanField, z.boolean().default(true)),
   workAreas: z.preprocess(parseJsonField, z.array(workAreaSchema).default([])).optional(),
   availabilityRules: z.preprocess(parseJsonField, z.array(availabilityRuleSchema).default([])).optional()
 });

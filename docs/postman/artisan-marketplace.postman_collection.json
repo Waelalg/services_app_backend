@@ -582,7 +582,7 @@
           ],
           "request": {
             "method": "POST",
-            "description": "Create a worker service listing as multipart form-data. This matches the mobile flow: category/subcategory selection, work areas, availability, description, and gallery photos. Send `workAreas` and `availabilityRules` as JSON strings, and repeat the `images` key for multiple files.",
+            "description": "Create a worker service listing as multipart form-data. This matches the mobile flow: category/subcategory selection, work areas, availability, description, and gallery photos. Send `workAreas` and `availabilityRules` as JSON strings, and repeat the `images` key for multiple files. `isPublished` defaults to true; send false only to save a draft.",
             "body": {
               "mode": "formdata",
               "formdata": [
@@ -623,7 +623,7 @@
                 },
                 {
                   "key": "isPublished",
-                  "value": "false",
+                  "value": "true",
                   "type": "text"
                 },
                 {
@@ -1162,10 +1162,10 @@
                 "value": "application/json"
               }
             ],
-            "description": "Create a direct booking without date/time selection.",
+            "description": "Create a direct booking without date/time selection. `note`, `contactPhone`, `wilaya`, `commune`, and `addressLine` are optional and may be omitted.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"listingId\": \"{{listingId}}\",\n  \"note\": \"Need help today if possible.\",\n  \"contactPhone\": \"+213555111111\"\n}"
+              "raw": "{\n  \"listingId\": \"{{listingId}}\",\n  \"contactPhone\": \"+213555000111\",\n  \"wilaya\": \"Biskra\",\n  \"commune\": \"Doucen\",\n  \"addressLine\": \"Lot 14, near the primary school\",\n  \"note\": \"Optional note\"\n}"
             },
             "url": "{{baseUrl}}/api/bookings"
           }
@@ -1194,10 +1194,10 @@
                 "value": "application/json"
               }
             ],
-            "description": "Create a scheduled booking with date and slot.",
+            "description": "Create a scheduled booking with date and slot. `note`, `contactPhone`, `wilaya`, `commune`, and `addressLine` are optional and may be omitted.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"listingId\": \"{{listingId}}\",\n  \"scheduledDate\": \"{{scheduledDate}}\",\n  \"slotStart\": \"09:00\",\n  \"slotEnd\": \"10:00\",\n  \"note\": \"Morning visit please.\",\n  \"contactPhone\": \"+213555111111\"\n}"
+              "raw": "{\n  \"listingId\": \"{{listingId}}\",\n  \"scheduledDate\": \"{{scheduledDate}}\",\n  \"slotStart\": \"09:00\",\n  \"slotEnd\": \"10:00\",\n  \"contactPhone\": \"+213555000111\",\n  \"wilaya\": \"Biskra\",\n  \"commune\": \"Doucen\",\n  \"addressLine\": \"Lot 14, near the primary school\",\n  \"note\": \"Optional note\"\n}"
             },
             "url": "{{baseUrl}}/api/bookings"
           }
@@ -1206,7 +1206,7 @@
           "name": "Get My Bookings",
           "request": {
             "method": "GET",
-            "description": "Client booking list with optional status filtering.",
+            "description": "Client booking list. Returns bookings where the authenticated user is the client who created the booking.",
             "url": "{{baseUrl}}/api/bookings/my?status=PENDING&page=1&pageSize=10"
           }
         },
@@ -1214,7 +1214,7 @@
           "name": "Get Incoming Bookings",
           "request": {
             "method": "GET",
-            "description": "Worker incoming booking queue.",
+            "description": "Worker booking queue. Returns bookings where the authenticated worker is the receiver of the booking request.",
             "url": "{{baseUrl}}/api/bookings/incoming?status=PENDING&page=1&pageSize=10"
           }
         },
@@ -1290,7 +1290,7 @@
           "name": "Get Worker Dashboard",
           "request": {
             "method": "GET",
-            "description": "Worker home payload with status counts, recent incoming bookings, matching opportunities, and upcoming jobs.",
+            "description": "Worker home payload with status counts, recent incoming bookings, matching opportunities, and upcoming jobs. Dashboard booking summaries include `contactPhone` and `address` when available.",
             "url": "{{baseUrl}}/api/workers/dashboard/me"
           }
         }

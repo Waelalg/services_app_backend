@@ -33,7 +33,7 @@ npm run prisma:generate
 npm run prisma:push
 ```
 
-5. Seed taxonomy data:
+5. Seed demo data:
 
 ```bash
 npm run seed
@@ -83,15 +83,30 @@ npm run dev
 - Booking cancellation is client-only, while booking accept/decline/complete is worker-only
 - Admin taxonomy routes require an authenticated user with role `ADMIN`
 
-## Taxonomy seed
+## Demo seed
 
-The seed creates these categories and subcategories:
+`npm run seed` creates a full demo dataset for the app:
 
 - `Works`: Plumbing, Painting, Electricity, Waterproofing, Locksmith, Drywall
 - `Beauty`: Hair, Makeup
 - `Health`: Nursing, Physio
+- one admin account
+- two client accounts
+- three worker accounts with profiles
+- published and draft listings
+- work areas, gallery images, availability rules, and time off
+- public client requests with photos
+- offers in `SENT`, `ACCEPTED`, and `REJECTED`
+- direct bookings and request-offer bookings in `PENDING`, `CONFIRMED`, `COMPLETED`, and `CANCELLED`
+- reviews and favorites
 
-If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set, `npm run seed` also creates or updates an `ADMIN` user.
+The seed refreshes the known demo accounts instead of wiping unrelated database records.
+
+Default demo credentials:
+
+- admin: `admin@example.com` / `AdminPass123`
+- client: `client@example.com` / `ClientPass123`
+- worker: `worker@example.com` / `WorkerPass123`
 
 ## API response format
 
@@ -152,6 +167,20 @@ Error:
 - `DELETE /api/workers/:workerId/favorite`
 - `GET /api/workers/favorites/me`
 - `GET /api/workers/dashboard/me`
+
+`GET /api/workers/dashboard/me` returns worker home data with:
+
+- `stats`
+- `recentIncomingBookings`
+- `recentOpportunities`
+- `upcomingJobs`
+
+Each booking item in `recentIncomingBookings` and `upcomingJobs` now includes:
+
+- `contactPhone`
+- `address.wilaya`
+- `address.commune`
+- `address.addressLine`
 
 ### Listings
 
@@ -247,7 +276,7 @@ Service identity lives on listings. The worker create-listing flow can be submit
 - `pricingType`: text, optional, `QUOTE|FIXED|HOURLY`
 - `priceFrom`: text/number, optional
 - `currency`: text, optional, defaults to `DZD`
-- `isPublished`: text/boolean, optional
+- `isPublished`: text/boolean, optional, defaults to `true`; send `false` only when saving a draft
 - `workAreas`: text containing a JSON array
 - `availabilityRules`: text containing a JSON array
 - `images`: file, optional, repeat this key for multiple gallery photos
@@ -430,6 +459,16 @@ Each item returns the worker service listing with `portfolio` pictures, work are
 
 ### `GET /api/bookings/my`
 
+- returns bookings where the authenticated user is the client who placed the booking
+- use this for the client's own booking history and booking tracking screens
+- `status`
+- `page`
+- `pageSize`
+
+### `GET /api/bookings/incoming`
+
+- returns bookings where the authenticated user is the worker receiving the booking
+- use this for the artisan's incoming booking requests and job queue
 - `status`
 - `page`
 - `pageSize`
@@ -442,11 +481,17 @@ Client sends:
 
 ```json
 {
-  "listingId": "listing_cuid",
-  "note": "Need help quickly",
-  "contactPhone": "+213..."
+  "listingId": "listing_cuid"
 }
 ```
+
+Optional fields:
+
+- `note`
+- `contactPhone`
+- `wilaya`
+- `commune`
+- `addressLine`
 
 ### Scheduled booking
 
@@ -457,10 +502,26 @@ Client sends:
   "listingId": "listing_cuid",
   "scheduledDate": "2026-04-25",
   "slotStart": "09:00",
-  "slotEnd": "10:00",
-  "note": "Please come in the morning"
+  "slotEnd": "10:00"
 }
 ```
+
+Optional fields:
+
+- `note`
+- `contactPhone`
+- `wilaya`
+- `commune`
+- `addressLine`
+
+Booking read responses include:
+
+- `contactPhone`
+- `address.wilaya`
+- `address.commune`
+- `address.addressLine`
+
+The worker dashboard uses the same booking address and phone fields for recent incoming bookings and upcoming jobs.
 
 ## Availability and slot generation
 

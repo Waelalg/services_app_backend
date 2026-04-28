@@ -219,6 +219,12 @@ export function serializeBooking(booking) {
     return null;
   }
 
+  const address = {
+    wilaya: booking.wilaya ?? booking.clientRequest?.wilaya ?? null,
+    commune: booking.commune ?? booking.clientRequest?.commune ?? null,
+    addressLine: booking.addressLine ?? booking.clientRequest?.addressLine ?? null
+  };
+
   return {
     id: booking.id,
     clientId: booking.clientId,
@@ -233,6 +239,7 @@ export function serializeBooking(booking) {
     slotEnd: booking.slotEnd,
     note: booking.note,
     contactPhone: booking.contactPhone,
+    address,
     status: booking.status,
     createdAt: formatDateTime(booking.createdAt),
     updatedAt: formatDateTime(booking.updatedAt),

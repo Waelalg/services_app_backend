@@ -511,7 +511,11 @@ export async function acceptOffer(clientId, offerId) {
     const offer = await tx.clientRequestOffer.findUnique({
       where: { id: offerId },
       include: {
-        request: true
+        request: {
+          include: {
+            client: true
+          }
+        }
       }
     });
 
@@ -556,6 +560,10 @@ export async function acceptOffer(clientId, offerId) {
         slotStart: bookingType === 'SCHEDULED' ? offer.proposedStartTime : null,
         slotEnd: bookingType === 'SCHEDULED' ? offer.proposedEndTime : null,
         note: offer.message ?? null,
+        contactPhone: offer.request.client.phone ?? null,
+        wilaya: offer.request.wilaya,
+        commune: offer.request.commune,
+        addressLine: offer.request.addressLine ?? null,
         status: 'CONFIRMED'
       },
       include: {

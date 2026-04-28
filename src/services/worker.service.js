@@ -5,6 +5,7 @@ import { buildPaginationMeta, getPagination } from '../utils/pagination.js';
 import {
   decimalToNumber,
   serializeClientRequest,
+  serializeBooking,
   serializeListing,
   serializeReview,
   serializeWorkerProfile
@@ -43,6 +44,31 @@ function getPublicWorkerSummary(worker, isFavorite = false) {
     createdAt: worker.createdAt.toISOString(),
     workAreas,
     listings: publishedListings.map((listing) => serializeListing(listing))
+  };
+}
+
+function getDashboardBookingSummary(booking) {
+  const serialized = serializeBooking(booking);
+
+  return {
+    id: booking.id,
+    status: booking.status,
+    createdAt: booking.createdAt.toISOString(),
+    scheduledDate: booking.scheduledDate ? booking.scheduledDate.toISOString().slice(0, 10) : null,
+    slotStart: booking.slotStart,
+    slotEnd: booking.slotEnd,
+    note: booking.note ?? null,
+    contactPhone: booking.contactPhone ?? booking.client.phone ?? booking.clientRequest?.client?.phone ?? null,
+    address: serialized.address,
+    client: {
+      id: booking.client.id,
+      firstName: booking.client.firstName,
+      lastName: booking.client.lastName,
+      fullName: `${booking.client.firstName} ${booking.client.lastName}`.trim(),
+      phone: booking.client.phone ?? null
+    },
+    listing: booking.listing ? serializeListing(booking.listing) : null,
+    request: booking.clientRequest ? serializeClientRequest(booking.clientRequest) : null
   };
 }
 
@@ -488,37 +514,8 @@ export async function getWorkerDashboard(userId) {
 
   return {
     stats,
-    recentIncomingBookings: recentIncomingBookings.map((booking) => ({
-      id: booking.id,
-      status: booking.status,
-      createdAt: booking.createdAt.toISOString(),
-      scheduledDate: booking.scheduledDate ? booking.scheduledDate.toISOString().slice(0, 10) : null,
-      slotStart: booking.slotStart,
-      slotEnd: booking.slotEnd,
-      client: {
-        id: booking.client.id,
-        firstName: booking.client.firstName,
-        lastName: booking.client.lastName,
-        fullName: `${booking.client.firstName} ${booking.client.lastName}`.trim()
-      },
-      listing: booking.listing ? serializeListing(booking.listing) : null,
-      request: booking.clientRequest ? serializeClientRequest(booking.clientRequest) : null
-    })),
+    recentIncomingBookings: recentIncomingBookings.map(getDashboardBookingSummary),
     recentOpportunities: recentOpportunities.map(serializeClientRequest),
-    upcomingJobs: upcomingJobs.map((booking) => ({
-      id: booking.id,
-      status: booking.status,
-      scheduledDate: booking.scheduledDate ? booking.scheduledDate.toISOString().slice(0, 10) : null,
-      slotStart: booking.slotStart,
-      slotEnd: booking.slotEnd,
-      client: {
-        id: booking.client.id,
-        firstName: booking.client.firstName,
-        lastName: booking.client.lastName,
-        fullName: `${booking.client.firstName} ${booking.client.lastName}`.trim()
-      },
-      listing: booking.listing ? serializeListing(booking.listing) : null,
-      request: booking.clientRequest ? serializeClientRequest(booking.clientRequest) : null
-    }))
+    upcomingJobs: upcomingJobs.map(getDashboardBookingSummary)
   };
 }

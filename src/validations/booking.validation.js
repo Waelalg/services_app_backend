@@ -8,17 +8,28 @@ import {
   requiredTimeStringSchema
 } from './common.validation.js';
 
+const emptyStringToNull = (value) => {
+  if (value === '') {
+    return null;
+  }
+
+  return value;
+};
+
 export const bookingIdParamsSchema = z.object({
   bookingId: cuidSchema
 });
 
 export const createBookingSchema = z.object({
   listingId: cuidSchema,
-  scheduledDate: requiredDateStringSchema.optional().nullable(),
-  slotStart: requiredTimeStringSchema.optional().nullable(),
-  slotEnd: requiredTimeStringSchema.optional().nullable(),
-  note: z.string().trim().max(2000).optional().nullable(),
-  contactPhone: z.string().trim().min(6).max(30).optional().nullable()
+  scheduledDate: z.preprocess(emptyStringToNull, requiredDateStringSchema.optional().nullable()),
+  slotStart: z.preprocess(emptyStringToNull, requiredTimeStringSchema.optional().nullable()),
+  slotEnd: z.preprocess(emptyStringToNull, requiredTimeStringSchema.optional().nullable()),
+  note: z.preprocess(emptyStringToNull, z.string().trim().max(2000).optional().nullable()),
+  contactPhone: z.preprocess(emptyStringToNull, z.string().trim().min(6).max(30).optional().nullable()),
+  wilaya: z.preprocess(emptyStringToNull, z.string().trim().min(1).max(120).optional().nullable()),
+  commune: z.preprocess(emptyStringToNull, z.string().trim().min(1).max(120).optional().nullable()),
+  addressLine: z.preprocess(emptyStringToNull, z.string().trim().max(500).optional().nullable())
 }).refine(
   (value) => {
     const scheduleFields = [value.scheduledDate, value.slotStart, value.slotEnd].filter(Boolean).length;
